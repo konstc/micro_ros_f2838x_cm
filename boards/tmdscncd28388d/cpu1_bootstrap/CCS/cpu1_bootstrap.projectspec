@@ -1,0 +1,41 @@
+<projectSpec>
+  <!--
+    CPU1 bootstrap for the TMDSCNCD28388D: clocks, CM pin mux, boots the CM from flash.
+    CPU1_RAM:   CPU1 code in RAM, loaded by CCS for each debug session.
+    CPU1_FLASH: CPU1 code in flash, for standalone boot.
+    Both configurations boot the CM from flash sector 0.
+
+    Path variables: C2000WARE_ROOT and MICROROS_F2838X_ROOT (this repository).
+    C2000Ware files are linked, not copied.
+  -->
+  <project
+        name="cpu1_bootstrap"
+        device="TMS320F28388D"
+        cgtVersion="25.11.1.LTS"
+        products="C2000WARE"
+        outputFormat="ELF"
+        launchWizard="False"
+        linkerCommandFile=""
+        >
+    <configuration name="CPU1_RAM"
+        compilerBuildOptions="--opt_level=off -I${C2000WARE_ROOT}/device_support/f2838x/common/include -I${C2000WARE_DLIB_ROOT} -v28 -ml -mt --cla_support=cla2 --float_support=fpu64 --tmu_support=tmu0 --define=DEBUG --define=CPU1 --define=RAM --diag_warning=225 --diag_suppress=10063"
+        linkerBuildOptions="--entry_point code_start --stack_size=0x3F8 --heap_size=0x200" />
+    <configuration name="CPU1_FLASH"
+        compilerBuildOptions="--opt_level=2 -I${C2000WARE_ROOT}/device_support/f2838x/common/include -I${C2000WARE_DLIB_ROOT} -v28 -ml -mt --cla_support=cla2 --float_support=fpu64 --tmu_support=tmu0 --define=_FLASH --define=CPU1 --diag_warning=225 --diag_suppress=10063"
+        linkerBuildOptions="--entry_point code_start --stack_size=0x3F8 --heap_size=0x200" />
+
+    <pathVariable name="MICROROS_F2838X_ROOT" path="../../../.." scope="project" />
+    <pathVariable name="C2000WARE_ROOT" path="${COM_TI_C2000WARE_INSTALL_DIR}" scope="project" />
+    <pathVariable name="C2000WARE_DLIB_ROOT" path="${C2000WARE_ROOT}/driverlib/f2838x/driverlib" scope="project" />
+
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cpu1_bootstrap/main_cpu1.c" targetDirectory="" />
+
+    <file action="link" path="${C2000WARE_ROOT}/device_support/f2838x/common/source/device.c" targetDirectory="device" />
+    <file action="link" path="${C2000WARE_ROOT}/device_support/f2838x/common/source/f2838x_codestartbranch.asm" targetDirectory="device" />
+    <file action="link" path="${C2000WARE_DLIB_ROOT}/ccs/Debug/driverlib.lib" targetDirectory="device" />
+    <file action="link" path="${C2000WARE_ROOT}/device_support/f2838x/common/cmd/2838x_RAM_lnk_cpu1.cmd" targetDirectory="" applicableConfigurations="CPU1_RAM" />
+    <file action="link" path="${C2000WARE_ROOT}/device_support/f2838x/common/cmd/2838x_FLASH_lnk_cpu1.cmd" targetDirectory="" applicableConfigurations="CPU1_FLASH" />
+    <!-- CCS needs the target configuration as a real file in the project. -->
+    <file action="copy" path="${C2000WARE_ROOT}/device_support/f2838x/common/targetConfigs/TMS320F28388D.ccxml" targetDirectory="targetConfigs" />
+  </project>
+</projectSpec>
