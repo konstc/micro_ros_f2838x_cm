@@ -1,0 +1,10 @@
+# Packages of the mcu workspace that are not built (same list as micro_ros_setup's
+# generate_lib target). Paths are relative to mcu_ws/.
+ros2/rcl_logging/rcl_logging_spdlog
+ros2/rcl
+ros2/rosidl/rosidl_typesupport_introspection_cpp
+ros2/rcpputils
+ros2/ros2_tracing/test_tracetools
+ros2/ros2_tracing/lttngpy
+uros/rcl/rcl_yaml_param_parser
+uros/rclc/rclc_examples

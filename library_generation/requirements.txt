@@ -1,0 +1,10 @@
+# Host-side Python tools for building libmicroros.a.
+colcon-common-extensions==0.3.0
+vcstool==0.3.0
+catkin_pkg==1.0.0
+empy==3.3.4
+lark==1.2.2
+PyYAML==6.0.2
+setuptools==68.1.2
+# CMake identifies tiarmclang as "TIClang" from 3.29 on.
+cmake==3.31.6

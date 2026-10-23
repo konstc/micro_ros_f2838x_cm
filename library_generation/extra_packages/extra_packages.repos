@@ -1,0 +1,9 @@
+# Extra ROS 2 packages (custom .msg/.srv) fetched with vcstool and built into
+# libmicroros.a. Package folders placed next to this file are built in as well.
+# Example:
+#   repositories:
+#     control_msgs:
+#       type: git
+#       url: https://github.com/ros-controls/control_msgs.git
+#       version: humble
+repositories: {}
