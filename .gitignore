@@ -1,0 +1,26 @@
+# libmicroros build output (published as release zips)
+/microros_static_library/
+
+# CCS workspaces and build configurations
+/.ccs_workspace/
+.metadata/
+.launches/
+.settings/
+Debug/
+Release/
+*.out
+*.map
+*.obj
+*.o
+*.d
+*.pp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editors and tools
+.vscode/
+*.swp
+*.stackdump
