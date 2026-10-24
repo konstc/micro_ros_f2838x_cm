@@ -1,0 +1,131 @@
+<projectSpec>
+  <!--
+    02_ping_pong_udp (CM, tiarmclang): answers std_msgs/Header on /c2000/ping
+    with /c2000/pong over Ethernet/UDP (lwIP), for tools/rtt_histogram.py.
+    Needs cpu1_bootstrap on CPU1.
+
+    Path variables: C2000WARE_ROOT, MICROROS_F2838X_ROOT (this repository) and
+    MICROROS_LIB (the library build to link; change it to use another
+    distribution or profile). Sources are linked, not copied.
+
+    posix_shim must come before the TI C library headers (include_next).
+
+    The C library heap is 0: only rcutils' default allocator references
+    malloc, and the port replaces it with the FreeRTOS heap before any
+    allocation (hence diag_suppress 10473, the linker's heap-size estimate).
+  -->
+  <project
+        name="02_ping_pong_udp"
+        device="Cortex M.TMS320F28388D"
+        toolChain="TICLANG"
+        cgtVersion="5.1.1.LTS"
+        products="C2000WARE"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
+        launchWizard="False"
+        linkerCommandFile=""
+        ignoreDefaultDeviceSettings="true"
+        compilerBuildOptions="
+            -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -mlittle-endian
+            -ffunction-sections -fdata-sections -g
+            -Wall -Werror=ti-pragmas -Werror=ti-intrinsics -Werror=implicit-function-declaration
+            -D_FLASH -D__TI_TIME_USES_64=1
+            -I${MICROROS_LIB}/posix_shim
+            -I${MICROROS_LIB}/include
+            -I${MICROROS_F2838X_ROOT}/examples/02_ping_pong_udp/src
+            -I${MICROROS_F2838X_ROOT}/examples/common
+            -I${MICROROS_F2838X_ROOT}/port/include
+            -I${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm
+            -I${MICROROS_F2838X_ROOT}/device/f2838x/cm/freertos_port
+            -I${MICROROS_F2838X_ROOT}/device/f2838x/cm/include
+            -I${LWIP_ROOT}/lwip-2.1.2/src/include
+            -I${LWIP_ROOT}/ports/C2000/include
+            -I${LWIP_ROOT}/ports/C2000
+            -I${LWIP_ROOT}
+            -I${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm
+            -I${C2000WARE_ROOT}/driverlib/f2838x
+            -I${C2000WARE_ROOT}/device_support/f2838x/common/include
+            -I${C2000WARE_ROOT}/kernel/FreeRTOS/Source/include
+            -I${CG_TOOL_ROOT}/include/c"
+        linkerBuildOptions="
+            -i${CG_TOOL_ROOT}/lib
+            -m=${ProjName}.map
+            --stack_size=0x800
+            --heap_size=0x0
+            --diag_suppress=10473
+            --rom_model
+            --reread_libs
+            --warn_sections
+            -llibc.a"
+        >
+    <configuration name="Debug" compilerBuildOptions="-O0 -DDEBUG" />
+    <configuration name="Release" compilerBuildOptions="-Os" />
+
+    <pathVariable name="MICROROS_F2838X_ROOT" path="../../.." scope="project" />
+    <pathVariable name="MICROROS_LIB" path="${MICROROS_F2838X_ROOT}/microros_static_library/jazzy/default" scope="project" />
+    <pathVariable name="C2000WARE_ROOT" path="${COM_TI_C2000WARE_INSTALL_DIR}" scope="project" />
+    <pathVariable name="LWIP_ROOT" path="${C2000WARE_ROOT}/libraries/communications/Ethernet/third_party/lwip" scope="project" />
+
+    <!-- Application -->
+    <file action="link" path="${MICROROS_F2838X_ROOT}/examples/02_ping_pong_udp/src/app.c" targetDirectory="" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/examples/common/microros_app.c" targetDirectory="common" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/examples/common/udp_config.c" targetDirectory="common" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/examples/common/freertos_hooks.c" targetDirectory="common" />
+
+    <!-- micro-ROS library and port -->
+    <file action="link" path="${MICROROS_LIB}/libmicroros.a" targetDirectory="microros" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/microros_f2838x.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/allocators_freertos.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/clock.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/libc_shims.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/net_lwip.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/stats.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/transport_udp_lwip.c" targetDirectory="port" />
+
+    <!-- Board and device -->
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/board.c" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/board_eth.c" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/lwipopts.h" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/linker/2838x_cm_flash.cmd" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/linker/2838x_cm_lwip.cmd" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/startup/startup_cm.c" targetDirectory="device" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/lwip/f2838xif_tiarmclang.c" targetDirectory="device" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/lwip/enet_tiarmclang.c" targetDirectory="device" />
+    <!-- driverlib: C2000Ware's prebuilt library, headers through driverlib_cm_tiarmclang.h -->
+    <file action="link" path="${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm/ccs/Debug/driverlib_cm.lib" targetDirectory="driverlib/Debug" applicableConfigurations="Debug" />
+    <file action="link" path="${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm/ccs/Release/driverlib_cm.lib" targetDirectory="driverlib/Release" applicableConfigurations="Release" />
+
+    <!-- lwIP 2.1.2 core from C2000Ware: IPv4, ARP, ICMP, UDP -->
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/def.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/inet_chksum.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/init.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ip.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/mem.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/memp.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/netif.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/pbuf.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/stats.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/sys.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/timeouts.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/udp.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ipv4/etharp.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ipv4/icmp.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ipv4/ip4.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ipv4/ip4_addr.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/core/ipv4/ip4_frag.c" targetDirectory="lwip" />
+    <file action="link" path="${LWIP_ROOT}/lwip-2.1.2/src/netif/ethernet.c" targetDirectory="lwip" />
+
+    <!-- FreeRTOS: kernel from C2000Ware, port from this repository -->
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/tasks.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/queue.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/list.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/timers.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/stream_buffer.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/portable/MemMang/heap_4.c" targetDirectory="freertos" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/freertos_port/port.c" targetDirectory="freertos" />
+
+    <!-- CCS needs the target configuration as a real file in the project. -->
+    <file action="copy" path="${C2000WARE_ROOT}/device_support/f2838x/common/targetConfigs/TMS320F28388D.ccxml" targetDirectory="targetConfigs" />
+  </project>
+</projectSpec>
