@@ -117,7 +117,7 @@ void board_led_toggle(unsigned id)
 }
 
 /* driverlib's ASSERT() hook (DEBUG builds). */
-void __error__(const char *filename, uint32_t line)
+void __error__(const char* filename, uint32_t line)
 {
     (void)filename;
     (void)line;

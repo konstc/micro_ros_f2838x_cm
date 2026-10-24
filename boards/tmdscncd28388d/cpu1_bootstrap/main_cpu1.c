@@ -17,14 +17,14 @@
  * Copyright 2026 Konstantin Chernyshov
  * SPDX-License-Identifier: Apache-2.0
  */
- 
+
 #include "driverlib.h"
 #include "device.h"
 
 /* D1 (GPIO31), driven by CM */
 #define LED_CM_GPIO                                      (DEVICE_GPIO_PIN_LED1)
 /* D2 (GPIO34), driven by CPU1 */
-#define LED_HEARTBEAT_GPIO                               (DEVICE_GPIO_PIN_LED2)   
+#define LED_HEARTBEAT_GPIO                               (DEVICE_GPIO_PIN_LED2)
 
 #define ENET_PHY_POWERDOWN_GPIO                                          (108U)
 #define ENET_PHY_RESET_GPIO                                              (119U)

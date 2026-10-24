@@ -82,13 +82,13 @@ void (* const vectorTableFlash[NUM_INTERRUPTS])(void) =
 
 static void nmiISR(void)
 {
-    for(;;)
+    for (;;)
     {
     }
 }
 
 __attribute__((used, noreturn))
-void startupFaultRecord(const uint32_t *frame, uint32_t excReturn)
+void startupFaultRecord(const uint32_t* frame, uint32_t excReturn)
 {
     uint32_t ipsr;
     __asm volatile("mrs %0, ipsr" : "=r"(ipsr));
@@ -116,7 +116,7 @@ void startupFaultRecord(const uint32_t *frame, uint32_t excReturn)
         g_startupFault.xpsr = frame[7];
     }
 
-    for(;;)
+    for (;;)
     {
     }
 }
@@ -135,7 +135,7 @@ static void faultISR(void)
 static void defaultISR(void)
 {
     __asm volatile("mrs %0, ipsr" : "=r"(g_startupFaultIpsr));
-    for(;;)
+    for (;;)
     {
     }
 }

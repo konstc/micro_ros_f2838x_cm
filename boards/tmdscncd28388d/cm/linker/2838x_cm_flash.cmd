@@ -52,7 +52,7 @@ SECTIONS
    .ARM.extab     : > CMBANK0_FLASH
 
    /* Code that must run from RAM (flash wait-state setup, SysCtl_delay).
-      CM_init() copies it before calling Flash_initModule(). */
+      board_init() copies it before calling Flash_initModule(). */
    .TI.ramfunc    : {} LOAD = CMBANK0_FLASH,
                        RUN = CRAM,
                        LOAD_START(RamfuncsLoadStart),

@@ -45,14 +45,18 @@ int usleep(useconds_t usec)
     return 0;
 }
 
-char* basename(char *path)
+char* basename(char* path)
 {
-    if ((path == NULL) || (*path == '\0'))
+    static char s_dot[] = ".";      /* POSIX allows static storage for the result */
+    char* ret = s_dot;
+
+    if ((path != NULL) && (*path != '\0'))
     {
-        return ".";
+        char* slash = strrchr(path, '/');
+        ret = (slash != NULL) ? (slash + 1) : path;
     }
-    char *slash = strrchr(path, '/');
-    return (slash != NULL) ? (slash + 1) : path;
+
+    return ret;
 }
 
 int setenv(const char* name, const char* value, int overwrite)
@@ -74,21 +78,25 @@ int unsetenv(const char* name)
 
 int strerror_r(int errnum, char* buf, size_t buflen)
 {
-    if ((buf == NULL) || (buflen == 0U))
+    int ret = ERANGE;
+
+    if ((buf != NULL) && (buflen != 0U))
     {
-        return ERANGE;
+        const char* msg = strerror(errnum);
+        size_t len = strlen(msg);
+
+        if (len < buflen)
+        {
+            memcpy(buf, msg, len + 1U);
+            ret = 0;
+        }
+        else
+        {
+            /* Truncated: still NUL-terminated, but reported as ERANGE. */
+            memcpy(buf, msg, buflen - 1U);
+            buf[buflen - 1U] = '\0';
+        }
     }
 
-    const char* msg = strerror(errnum);
-    size_t len = strlen(msg);
-
-    if (len >= buflen)
-    {
-        memcpy(buf, msg, buflen - 1U);
-        buf[buflen - 1U] = '\0';
-        return ERANGE;
-    }
-
-    memcpy(buf, msg, len + 1U);
-    return 0;
+    return ret;
 }

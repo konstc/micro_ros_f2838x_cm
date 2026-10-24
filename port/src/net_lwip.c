@@ -96,7 +96,7 @@ static void net_task(void* arg)
     }
 
     uint32_t sleepMs = 0U;
-    for(;;)
+    for (;;)
     {
         (void)ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(sleepMs));
 
@@ -133,7 +133,7 @@ bool net_start(const char* ip, const char* netmask, const char* gateway, const u
         (void)xTaskNotifyWait(0U, UINT32_MAX, &result, pdMS_TO_TICKS(NET_START_TIMEOUT_MS));
         ret = result == 1U;
     }
-    
+
     return ret;
 }
 

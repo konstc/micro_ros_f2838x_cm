@@ -103,7 +103,7 @@ if [[ $NATIVE == 0 ]]; then
     exit 0
 fi
 
-# -------------------------------- Native mode -------------------------------- 
+# -------------------------------- Native mode --------------------------------
 
 WORK_ROOT=${MICROROS_WORK_DIR:-$HOME/.cache/micro_ros_f2838x_cm}
 WORK=$WORK_ROOT/$DISTRO

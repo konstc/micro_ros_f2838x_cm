@@ -72,7 +72,7 @@ void microros_f2838x_deallocate(void* pointer, void* state)
 
     if (pointer != NULL)
     {
-        block_header_t *header = (block_header_t *)pointer - 1;
+        block_header_t* header = (block_header_t*)pointer - 1;
         account(0U, header->size);
         vPortFree(header);
     }
@@ -92,8 +92,8 @@ void* microros_f2838x_reallocate(void* pointer, size_t size, void* state)
     }
     else
     {
-        size_t oldSize = ((block_header_t *)pointer - 1)->size;
-        void *newPointer = microros_f2838x_allocate(size, state);
+        size_t oldSize = ((block_header_t*)pointer - 1)->size;
+        void* newPointer = microros_f2838x_allocate(size, state);
 
         /* like realloc: if the allocation fails, the old block stays valid */
         if (newPointer != NULL)
@@ -113,7 +113,7 @@ void* microros_f2838x_zero_allocate(size_t count, size_t size, void* state)
 
     if ((size == 0U) || (count <= (SIZE_MAX / size)))
     {
-        void *pointer = microros_f2838x_allocate(count * size, state);
+        void* pointer = microros_f2838x_allocate(count * size, state);
         if (pointer != NULL)
         {
             memset(pointer, 0, count * size);

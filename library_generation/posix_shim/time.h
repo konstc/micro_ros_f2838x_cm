@@ -23,7 +23,7 @@ extern "C" {
 #define CLOCK_MONOTONIC                                          ((clockid_t)1)
 #endif
 
-int clock_gettime(clockid_t clock_id, struct timespec *tp);
+int clock_gettime(clockid_t clock_id, struct timespec* tp);
 
 #ifdef __cplusplus
 }

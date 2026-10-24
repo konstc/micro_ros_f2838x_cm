@@ -34,24 +34,27 @@ static bool init_allocator(void)
 
 bool microros_f2838x_init(const microros_f2838x_cfg_t* cfg)
 {
-    if ((cfg == NULL) || !init_allocator())
+    bool ok = false;
+
+    if ((cfg != NULL) && init_allocator())
     {
-        return false;
+        switch (cfg->transport)
+        {
+            case MICROROS_F2838X_TRANSPORT_UDP:
+                ok = net_start(cfg->udp.ip, cfg->udp.netmask, cfg->udp.gateway, cfg->udp.mac) &&
+                     udp_transport_configure(cfg->udp.agent_ip, cfg->udp.agent_port) &&
+                     (rmw_uros_set_custom_transport(false, NULL,
+                                                    udp_transport_open, udp_transport_close,
+                                                    udp_transport_write, udp_transport_read)
+                      == RMW_RET_OK);
+                break;
+
+            default:
+                break;
+        }
     }
 
-    switch (cfg->transport)
-    {
-        case MICROROS_F2838X_TRANSPORT_UDP:
-            return net_start(cfg->udp.ip, cfg->udp.netmask, cfg->udp.gateway, cfg->udp.mac) &&
-                   udp_transport_configure(cfg->udp.agent_ip, cfg->udp.agent_port) &&
-                   (rmw_uros_set_custom_transport(false, NULL,
-                                                  udp_transport_open, udp_transport_close,
-                                                  udp_transport_write, udp_transport_read)
-                    == RMW_RET_OK);
-
-        default:
-            return false;
-    }
+    return ok;
 }
 
 void microros_f2838x_lock_allocations(bool locked)

@@ -20,7 +20,7 @@
 
 /* LEDs the CM owns (CPU1 hands them over in cpu1_bootstrap). */
 /* D1, GPIO31 */
-#define BOARD_LED_STATUS                                                   (0U) 
+#define BOARD_LED_STATUS                                                   (0U)
 
 /* Interrupt priorities (0 highest .. 7 lowest). ISRs that call FreeRTOS
  * "FromISR" functions must use 5..7 (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY). */

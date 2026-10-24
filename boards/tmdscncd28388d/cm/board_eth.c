@@ -105,7 +105,7 @@ static void coreInterruptEnable(void)
 static void initController(const uint8_t mac[6])
 {
     Ethernet_InitInterfaceConfig interfaceConfig;
-    Ethernet_InitConfig *initConfig;
+    Ethernet_InitConfig* initConfig;
 
     interfaceConfig.ssbase = EMAC_SS_BASE;
     interfaceConfig.enet_base = EMAC_BASE;

@@ -30,14 +30,14 @@
 
 static ip_addr_t s_agentIp;
 static uint16_t s_agentPort;
-static struct udp_pcb *s_pcb;
+static struct udp_pcb* s_pcb;
 
 static StaticMessageBuffer_t s_rxBufferStruct;
 static uint8_t s_rxBufferStorage[MICROROS_F2838X_UDP_RX_BUFFER_BYTES + 1U];
 static MessageBufferHandle_t s_rxBuffer;
 static uint8_t s_rxScratch[UDP_MTU];      /* used by the net task only */
 
-bool udp_transport_configure(const char *agent_ip, uint16_t agent_port)
+bool udp_transport_configure(const char* agent_ip, uint16_t agent_port)
 {
     bool ret = false;
 
@@ -55,7 +55,7 @@ bool udp_transport_configure(const char *agent_ip, uint16_t agent_port)
             ret = s_rxBuffer != NULL;
         }
     }
-    
+
     return ret;
 }
 
@@ -126,6 +126,7 @@ size_t udp_transport_write(struct uxrCustomTransport* transport, const uint8_t* 
 {
     (void)transport;
     err_t result = ERR_MEM;
+    size_t written = 0U;
 
     net_lock();
     struct pbuf* p = pbuf_alloc(PBUF_TRANSPORT, (u16_t)len, PBUF_RAM);
@@ -137,15 +138,18 @@ size_t udp_transport_write(struct uxrCustomTransport* transport, const uint8_t* 
     }
     net_unlock();
 
-    if (result != ERR_OK)
+    if (result == ERR_OK)
+    {
+        microros_f2838x_stats.udp_tx_datagrams++;
+        written = len;
+    }
+    else
     {
         microros_f2838x_stats.udp_tx_errors++;
         *err = 1U;
-        return 0U;
     }
-    microros_f2838x_stats.udp_tx_datagrams++;
 
-    return len;
+    return written;
 }
 
 size_t udp_transport_read(struct uxrCustomTransport* transport, uint8_t* buf,

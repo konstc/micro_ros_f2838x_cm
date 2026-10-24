@@ -12,7 +12,7 @@ extern "C" {
 
 int strcasecmp(const char* s1, const char* s2);
 int strncasecmp(const char* s1, const char* s2, size_t n);
-int strerror_r(int errnum, char *buf, size_t buflen);
+int strerror_r(int errnum, char* buf, size_t buflen);
 
 #ifdef __cplusplus
 }
