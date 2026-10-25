@@ -7,7 +7,9 @@ KEEP_LIST is a YAML file with a whitespace-separated "keep" entry, the format
 used by micro_ros_setup (e.g. repos/jazzy/client_ros2_packages.txt).
 """
 import sys
+
 import yaml
+
 
 def main():
     if len(sys.argv) != 2:

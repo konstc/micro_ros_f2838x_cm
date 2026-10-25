@@ -1,6 +1,9 @@
 /*
  * FreeRTOS configuration for the F2838x Connectivity Manager on the
  * TMDSCNCD28388D controlCARD.
+ *
+ * Copyright 2026 Konstantin Chernyshov
+ * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H

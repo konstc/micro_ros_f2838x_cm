@@ -1,5 +1,8 @@
 /*
  * POSIX additions to the TI Arm Clang C library <string.h>.
+ *
+ * Copyright 2026 Konstantin Chernyshov
+ * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef MICROROS_F2838X_POSIX_SHIM_STRING_H
 #define MICROROS_F2838X_POSIX_SHIM_STRING_H

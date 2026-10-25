@@ -1,5 +1,8 @@
 /*
  * Minimal <unistd.h> for the TI Arm Clang C library, which has none.
+ *
+ * Copyright 2026 Konstantin Chernyshov
+ * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef MICROROS_F2838X_POSIX_SHIM_UNISTD_H
 #define MICROROS_F2838X_POSIX_SHIM_UNISTD_H

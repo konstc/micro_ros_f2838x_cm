@@ -1,0 +1,21 @@
+# micro-ROS agent and ROS 2 command line for the examples (ROS 2 Jazzy).
+#   docker compose -f tools/agent/docker-compose.yml up agent-udp
+#   docker compose -f tools/agent/docker-compose.yml run --rm ros2 ros2 topic hz /c2000/counter
+#   docker compose -f tools/agent/docker-compose.yml run --rm ros2 python3 /tools/rtt_histogram.py
+name: microros-f2838x
+
+services:
+  agent-udp:
+    image: microros/micro-ros-agent:jazzy
+    command: ["udp4", "--port", "8888", "-v4"]
+    ports:
+      - "8888:8888/udp"
+
+  ros2:
+    image: ros:jazzy
+    profiles: ["cli"]
+    volumes:
+      - ../:/tools:ro
+    command: ["bash"]
+    stdin_open: true
+    tty: true
