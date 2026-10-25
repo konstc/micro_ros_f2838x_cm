@@ -1,0 +1,85 @@
+<projectSpec>
+  <!--
+    link_check (CM, tiarmclang): build check that links libmicroros.a with FreeRTOS,
+    driverlib_cm and the port's libc shims; see src/main.c.
+
+    Path variables: C2000WARE_ROOT, MICROROS_F2838X_ROOT (this repository) and
+    MICROROS_LIB (the library build to link; change it to use another
+    distribution or profile).
+
+    posix_shim must come before the TI C library headers (include_next).
+  -->
+  <project
+        name="link_check"
+        device="Cortex M.TMS320F28388D"
+        toolChain="TICLANG"
+        cgtVersion="5.1.1.LTS"
+        products="C2000WARE"
+        endianness="little"
+        outputFormat="ELF"
+        outputType="executable"
+        launchWizard="False"
+        linkerCommandFile=""
+        ignoreDefaultDeviceSettings="true"
+        compilerBuildOptions="
+            -mcpu=cortex-m4 -mthumb -mfloat-abi=soft -mlittle-endian
+            -ffunction-sections -fdata-sections -g
+            -Wall -Werror=ti-pragmas -Werror=ti-intrinsics -Werror=implicit-function-declaration
+            -D_FLASH -D__TI_TIME_USES_64=1
+            -I${MICROROS_LIB}/posix_shim
+            -I${MICROROS_LIB}/include
+            -I${MICROROS_F2838X_ROOT}/port/include
+            -I${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm
+            -I${MICROROS_F2838X_ROOT}/device/f2838x/cm/freertos_port
+            -I${MICROROS_F2838X_ROOT}/device/f2838x/cm/include
+            -I${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm
+            -I${C2000WARE_ROOT}/device_support/f2838x/common/include
+            -I${C2000WARE_ROOT}/kernel/FreeRTOS/Source/include
+            -I${CG_TOOL_ROOT}/include/c"
+        linkerBuildOptions="
+            -i${CG_TOOL_ROOT}/lib
+            -m=${ProjName}.map
+            --stack_size=0x800
+            --heap_size=0x1000
+            --rom_model
+            --reread_libs
+            --warn_sections
+            -llibc.a"
+        >
+    <configuration name="Debug" compilerBuildOptions="-O0 -DDEBUG" />
+    <configuration name="Release" compilerBuildOptions="-Os" />
+
+    <pathVariable name="MICROROS_F2838X_ROOT" path="../../.." scope="project" />
+    <pathVariable name="MICROROS_LIB" path="${MICROROS_F2838X_ROOT}/microros_static_library/jazzy/default" scope="project" />
+    <pathVariable name="C2000WARE_ROOT" path="${COM_TI_C2000WARE_INSTALL_DIR}" scope="project" />
+
+    <!-- Application -->
+    <file action="link" path="${MICROROS_F2838X_ROOT}/tests/link_check/src/main.c" targetDirectory="" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/examples/common/freertos_hooks.c" targetDirectory="common" />
+
+    <!-- micro-ROS library and port -->
+    <file action="link" path="${MICROROS_LIB}/libmicroros.a" targetDirectory="microros" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/libc_shims.c" targetDirectory="port" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/port/src/clock.c" targetDirectory="port" />
+
+    <!-- Board and device -->
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/board.c" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/boards/tmdscncd28388d/cm/linker/2838x_cm_flash.cmd" targetDirectory="board" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/startup/startup_cm.c" targetDirectory="device" />
+    <!-- driverlib: C2000Ware's prebuilt library, headers through driverlib_cm_tiarmclang.h -->
+    <file action="link" path="${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm/ccs/Debug/driverlib_cm.lib" targetDirectory="driverlib/Debug" applicableConfigurations="Debug" />
+    <file action="link" path="${C2000WARE_ROOT}/driverlib/f2838x/driverlib_cm/ccs/Release/driverlib_cm.lib" targetDirectory="driverlib/Release" applicableConfigurations="Release" />
+
+    <!-- FreeRTOS: kernel from C2000Ware, port from this repository -->
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/tasks.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/queue.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/list.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/timers.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/stream_buffer.c" targetDirectory="freertos" />
+    <file action="link" path="${C2000WARE_ROOT}/kernel/FreeRTOS/Source/portable/MemMang/heap_4.c" targetDirectory="freertos" />
+    <file action="link" path="${MICROROS_F2838X_ROOT}/device/f2838x/cm/freertos_port/port.c" targetDirectory="freertos" />
+
+    <!-- CCS needs the target configuration as a real file in the project. -->
+    <file action="copy" path="${C2000WARE_ROOT}/device_support/f2838x/common/targetConfigs/TMS320F28388D.ccxml" targetDirectory="targetConfigs" />
+  </project>
+</projectSpec>
