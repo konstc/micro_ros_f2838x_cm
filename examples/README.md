@@ -50,7 +50,10 @@ its sources as the examples do.
    the node name, the number of executor handles, and `app_create()` /
    `app_destroy()` for your publishers, subscriptions, timers and services.
    [01_publisher_udp/src/app.c](01_publisher_udp/src/app.c) is the
-   smallest example.
+   smallest example. Declare timer callbacks with
+   `MICROROS_F2838X_TIMER_CALLBACK_ARGS` from
+   [rcl_compat.h](../port/include/microros_f2838x/rcl_compat.h): rcl passes
+   them an extra argument since Lyrical.
 4. Import, build and load as in the
    [README](../README.md#2-import-the-projects-into-ccs).
 

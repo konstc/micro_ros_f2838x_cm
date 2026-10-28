@@ -52,7 +52,7 @@ static const rclc_parameter_options_t s_parameterOptions = {
 /* Kept across reconnections, so that a new session keeps the last rate. */
 static int64_t s_rateHz = RATE_DEFAULT_HZ;
 
-static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
+static void timer_callback(MICROROS_F2838X_TIMER_CALLBACK_ARGS(timer, last_call_time))
 {
     (void)last_call_time;
 

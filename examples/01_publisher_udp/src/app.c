@@ -20,7 +20,7 @@ static rcl_publisher_t s_publisher;
 static rcl_timer_t s_timer;
 static std_msgs__msg__Int32 s_message;
 
-static void timer_callback(rcl_timer_t* timer, int64_t last_call_time)
+static void timer_callback(MICROROS_F2838X_TIMER_CALLBACK_ARGS(timer, last_call_time))
 {
     (void)last_call_time;
 

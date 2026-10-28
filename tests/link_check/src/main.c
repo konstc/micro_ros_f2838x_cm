@@ -25,6 +25,7 @@
 #include <std_srvs/srv/trigger.h>
 
 #include "board.h"
+#include "microros_f2838x/rcl_compat.h"
 #include "microros_f2838x_build_info.h"
 
 #define MICROROS_TASK_STACK_WORDS   2048U   /* 8 KB */
@@ -76,7 +77,7 @@ static std_msgs__msg__Int32 s_subMsg;
 static std_srvs__srv__Trigger_Request s_request;
 static std_srvs__srv__Trigger_Response s_response;
 
-static void timerCallback(rcl_timer_t* timer, int64_t lastCallTime)
+static void timerCallback(MICROROS_F2838X_TIMER_CALLBACK_ARGS(timer, lastCallTime))
 {
     (void)lastCallTime;
     if (timer != NULL)

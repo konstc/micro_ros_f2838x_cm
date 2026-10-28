@@ -57,7 +57,7 @@ static void ping_received(const void* message)
     (void)rcl_publish(&s_pongPublisher, &s_pong, NULL);
 }
 
-static void sync_callback(rcl_timer_t* timer, int64_t last_call_time)
+static void sync_callback(MICROROS_F2838X_TIMER_CALLBACK_ARGS(timer, last_call_time))
 {
     (void)last_call_time;
 

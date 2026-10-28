@@ -78,10 +78,11 @@ for spec in "${SPECS[@]}"; do
         continue
     fi
     # Project-scope path variables beat -ccs.definePathVariable, so the imported
-    # .project is edited instead.
+    # project is edited instead: MICROROS_LIB is a path variable in .project
+    # (linked files) and a build macro in .cproject (include paths).
     if [[ -n $LIBRARY ]]; then
-        sed -i "s#\(/microros_static_library/\)[^/<]*/[^/<]*</value>#\1$LIBRARY</value>#" \
-            "$WORKSPACE/$project/.project"
+        sed -i "s#\(/microros_static_library/\)[^/<\"]*/[^/<\"]*\([<\"]\)#\1$LIBRARY\2#g" \
+            "$WORKSPACE/$project/.project" "$WORKSPACE/$project/.cproject"
     fi
 
     for config in "${configs[@]}"; do

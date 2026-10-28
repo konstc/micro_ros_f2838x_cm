@@ -22,6 +22,7 @@
 #include <rclc/rclc.h>
 
 #include "microros_f2838x/microros_f2838x.h"
+#include "microros_f2838x/rcl_compat.h"
 
 /* Transport configuration. */
 extern const microros_f2838x_cfg_t app_config;
