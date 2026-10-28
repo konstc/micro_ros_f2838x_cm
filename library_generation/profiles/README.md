@@ -9,7 +9,7 @@ compiled into `libmicroros.a`, so changing them means rebuilding the library.
 | default | 1 | 7 / 4 | 7 / 1 | 4 | 4 | 512 |
 | large | 2 | 13 / 8 | 14 / 2 | 4 | 4 | 512 |
 
-- The rclc parameter server (Jazzy) uses 6 services (get, get types, set, set
+- The rclc parameter server uses 6 services (get, get types, set, set
   atomically, list, describe) and 1 optional publisher (parameter events).
   `default` therefore has 7 services (parameter server + one of the
   application's) and 7 publishers (6 + parameter events); `large` makes the
@@ -20,6 +20,8 @@ compiled into `libmicroros.a`, so changing them means rebuilding the library.
   buffers MTU × stream history bytes per direction, and the static input
   buffer pool scales with `MAX_HISTORY`, so MTU and the two history values are
   the main RAM levers of the library.
+- `RCUTILS_NO_PROCESS_SUPPORT` (rcutils since Lyrical; Jazzy ignores it)
+  leaves out rcutils' process API, which needs `sys/wait.h`.
 - `RMW_UXRCE_TRANSPORT=custom`, together with the XRCE client's custom
   transport and stream framing, lets the port register UART (framed) and UDP
   (packet) transports at run time.

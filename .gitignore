@@ -1,6 +1,9 @@
 # libmicroros build output (published as release zips)
 /microros_static_library/
 
+# Planning documents
+/docs/
+
 # CCS workspaces and build configurations
 /.ccs_workspace/
 .metadata/

@@ -7,8 +7,24 @@
 #   --toolchain NAME       compiler toolchain; only "tiarmclang" is supported (default)
 #   --extra-packages DIR   extra ROS 2 packages (.msg/.srv) to build in; repeatable.
 #                          In Docker mode DIR must be inside the repository.
-#   --native               build on this Linux host (e.g. WSL2) instead of in Docker
-#   --clean                drop the cached workspaces and fetch all sources again
+#   --native               build on this Linux host (e.g. WSL2) instead of in Docker;
+#                          Jazzy only
+#   --clean                native mode: drop the cached workspaces and fetch all
+#                          sources again (a Docker build always starts afresh)
+#
+# Docker mode runs library_generation.sh in micro-ROS's static library builder
+# image, microros/micro_ros_static_library_builder:<distro>, which builds with
+# micro_ros_setup. Lyrical has no such image yet (micro-ROS/docker#117) and
+# the Rolling image's micro_ros_setup predates fixes the build needs: both
+# install micro_ros_setup from its distro branch first, Lyrical in ros:lyrical.
+# Native mode takes the same steps without a ROS 2 installation, from the
+# package lists in repos/<distro>/.
+#
+# Environment:
+#   MICROROS_DOCKER_CACHE  Docker mode: volume name or absolute path that keeps
+#                          TI Arm Clang (default: volume micro_ros_f2838x_cm_cache)
+#   MICROROS_WORK_DIR      native mode: toolchain, sources and workspaces
+#                          (default: ~/.cache/micro_ros_f2838x_cm)
 #
 # Output: microros_static_library/<distro>/<profile>/
 #           libmicroros.a, include/, posix_shim/, build_info.json, sources.repos
@@ -17,14 +33,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=library_generation/common.sh
+. "$SCRIPT_DIR/common.sh"
 
-TIARMCLANG_VERSION=5.1.1.LTS
-TIARMCLANG_INSTALLER=ti_cgt_armllvm_${TIARMCLANG_VERSION}_linux-x64_installer.bin
-TIARMCLANG_URL=https://dr-download.ti.com/software-development/ide-configuration-compiler-or-debugger/MD-ayxs93eZNN/${TIARMCLANG_VERSION}/${TIARMCLANG_INSTALLER}
-TIARMCLANG_SHA256=ec4c54500b04aa3245d855038a86d3123c53c9eb14c2bfba5fcfb633dc3b3869
-
-DOCKER_IMAGE=micro_ros_f2838x_cm_builder:tiarmclang-${TIARMCLANG_VERSION}
-DOCKER_WORK_VOLUME=micro_ros_f2838x_cm_work
+BUILDER_IMAGE=microros/micro_ros_static_library_builder
+DOCKER_CACHE=${MICROROS_DOCKER_CACHE:-micro_ros_f2838x_cm_cache}
 
 DISTRO=jazzy
 PROFILE=default
@@ -32,9 +45,6 @@ TOOLCHAIN=tiarmclang
 EXTRA_PACKAGES=()
 NATIVE=0
 CLEAN=0
-
-die() { echo "error: $*" >&2; exit 1; }
-step() { echo; echo "=== $*"; }
 
 usage() { sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit "${1:-0}"; }
 
@@ -52,50 +62,53 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ $TOOLCHAIN == tiarmclang ]] || die "unsupported toolchain '$TOOLCHAIN' (only tiarmclang)"
-REPOS_DIR=$SCRIPT_DIR/repos/$DISTRO
 META=$SCRIPT_DIR/profiles/$PROFILE.meta
 TOOLCHAIN_FILE=$SCRIPT_DIR/toolchains/${TOOLCHAIN}_cm4.cmake
-[[ -d $REPOS_DIR ]] || die "no package lists for distro '$DISTRO' in $REPOS_DIR"
 [[ -f $META ]] || die "no profile '$PROFILE' ($META)"
+OUT=$REPO_ROOT/microros_static_library/$DISTRO/$PROFILE
 
 # -------------------------------- Docker mode --------------------------------
 
 run_in_docker() {
     command -v docker >/dev/null || die "docker not found; install Docker or use --native"
-    local args=(--distro "$DISTRO" --profile "$PROFILE" --toolchain "$TOOLCHAIN") pkg
-    [[ $CLEAN == 1 ]] && args+=(--clean)
+    local image=$BUILDER_IMAGE:$DISTRO
+    local args=(--profile "$PROFILE") pkg
+    case $DISTRO in
+        lyrical) image=ros:lyrical; args+=(--setup-from-branch) ;;
+        rolling) args+=(--setup-from-branch) ;;
+    esac
     for pkg in "${EXTRA_PACKAGES[@]}"; do
         [[ $pkg == "$REPO_ROOT"/* ]] || die "in Docker mode --extra-packages must be inside the repository: $pkg"
         args+=(--extra-packages "/project/${pkg#"$REPO_ROOT"/}")
     done
 
-    local host_repo=$REPO_ROOT host_ctx=$SCRIPT_DIR run_opts=()
+    local host_repo=$REPO_ROOT cache=$DOCKER_CACHE run_opts=()
     if [[ $(uname -s) == MINGW* || $(uname -s) == MSYS* ]]; then
         # Git Bash on Windows: pass Windows paths to docker and stop MSYS from
-        # rewriting container paths (/project, /work).
+        # rewriting container paths (/project, /cache).
         export MSYS_NO_PATHCONV=1
         host_repo=$(cygpath -m "$REPO_ROOT")
-        host_ctx=$(cygpath -m "$SCRIPT_DIR")
+        [[ $cache != */* ]] || cache=$(cygpath -m "$cache")
     else
         # Linux: hand output files back to the calling user.
         run_opts+=(-e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)")
     fi
     [[ -t 1 ]] && run_opts+=(-t)
 
-    step "Building Docker image $DOCKER_IMAGE"
-    docker build \
-        --build-arg TIARMCLANG_VERSION="$TIARMCLANG_VERSION" \
-        --build-arg TIARMCLANG_URL="$TIARMCLANG_URL" \
-        --build-arg TIARMCLANG_SHA256="$TIARMCLANG_SHA256" \
-        -t "$DOCKER_IMAGE" "$host_ctx"
+    step "Pulling $image"
+    docker pull "$image" || docker image inspect "$image" >/dev/null ||
+        die "image $image is neither pullable nor present"
 
-    step "Running the build in Docker"
+    # bash as the entrypoint: the image's own entrypoint needs the script to be
+    # executable, which a checkout on Windows does not guarantee.
+    step "Running library_generation.sh in $image"
     docker run --rm "${run_opts[@]}" \
         -v "$host_repo:/project" \
-        -v "$DOCKER_WORK_VOLUME:/work" \
-        -e MICROROS_WORK_DIR=/work \
-        "$DOCKER_IMAGE" \
-        bash /project/library_generation/build_library.sh --native "${args[@]}"
+        -v "$cache:/cache" \
+        -e MICROROS_CACHE_DIR=/cache \
+        --entrypoint bash \
+        "$image" \
+        /project/library_generation/library_generation.sh "${args[@]}"
 }
 
 if [[ $NATIVE == 0 ]]; then
@@ -105,13 +118,14 @@ fi
 
 # -------------------------------- Native mode --------------------------------
 
+REPOS_DIR=$SCRIPT_DIR/repos/$DISTRO
+[[ -d $REPOS_DIR ]] || die "no package lists for '$DISTRO' in $REPOS_DIR; build it in Docker mode"
 WORK_ROOT=${MICROROS_WORK_DIR:-$HOME/.cache/micro_ros_f2838x_cm}
 WORK=$WORK_ROOT/$DISTRO
 FW=$WORK/firmware
-OUT=$REPO_ROOT/microros_static_library/$DISTRO/$PROFILE
 
 setup_python() {
-    # The Docker image provides the tools on PATH; elsewhere use our own venv.
+    # Tools already on PATH (e.g. a ROS 2 environment) are used; otherwise our own venv.
     if command -v colcon >/dev/null && command -v vcs >/dev/null; then
         return
     fi
@@ -120,28 +134,6 @@ setup_python() {
     [[ -x $venv/bin/python ]] || python3 -m venv "$venv"
     "$venv/bin/pip" install --quiet --disable-pip-version-check -r "$SCRIPT_DIR/requirements.txt"
     export PATH="$venv/bin:$PATH"
-}
-
-setup_toolchain() {
-    if [[ -n ${TIARMCLANG_ROOT:-} ]]; then
-        [[ -x $TIARMCLANG_ROOT/bin/tiarmclang ]] || die "TIARMCLANG_ROOT has no bin/tiarmclang: $TIARMCLANG_ROOT"
-        return
-    fi
-    local dir=$WORK_ROOT/toolchain
-    local root=$dir/ti-cgt-armllvm_$TIARMCLANG_VERSION
-    if [[ ! -x $root/bin/tiarmclang ]]; then
-        step "Installing TI Arm Clang $TIARMCLANG_VERSION into $dir"
-        mkdir -p "$dir"
-        local installer=$dir/$TIARMCLANG_INSTALLER
-        if [[ ! -f $installer ]]; then
-            curl -fL -o "$installer.part" "$TIARMCLANG_URL"
-            mv "$installer.part" "$installer"
-        fi
-        echo "$TIARMCLANG_SHA256  $installer" | sha256sum -c -
-        chmod +x "$installer"
-        "$installer" --mode unattended --prefix "$dir"
-    fi
-    export TIARMCLANG_ROOT=$root
 }
 
 fetch_sources() {
@@ -184,37 +176,7 @@ build_dev_ws() {
     set -u
 }
 
-prepare_mcu_ws() {
-    step "Preparing mcu_ws: extra packages and patches"
-    local extra=$FW/mcu_ws/extra_packages
-    rm -rf "$extra"
-    mkdir -p "$extra"
-    cp -R "$SCRIPT_DIR/extra_packages/." "$extra/"
-    if python3 -c 'import sys, yaml; sys.exit(not (yaml.safe_load(open(sys.argv[1])) or {}).get("repositories"))' \
-            "$extra/extra_packages.repos"; then
-        (cd "$extra" && vcs import --input extra_packages.repos)
-    fi
-    local pkg
-    for pkg in "${EXTRA_PACKAGES[@]}"; do
-        [[ -d $pkg ]] || die "extra package directory not found: $pkg"
-        cp -R "$pkg" "$extra/"
-    done
-
-    # patches/<distro>/<repository path in mcu_ws>/*.patch, applied in name order.
-    local pdir=$SCRIPT_DIR/patches/$DISTRO patch rel repo
-    [[ -d $pdir ]] || return 0
-    while IFS= read -r patch; do
-        rel=${patch#"$pdir"/}
-        repo=$FW/mcu_ws/$(dirname "$rel")
-        if git -C "$repo" apply --reverse --check "$patch" 2>/dev/null; then
-            echo "already applied: $rel"
-        else
-            echo "applying: $rel"
-            git -C "$repo" apply "$patch"
-        fi
-    done < <(find "$pdir" -name '*.patch' | sort)
-}
-
+# The same colcon invocation as micro_ros_setup's generate_lib target.
 build_mcu_ws() {
     step "Cross-compiling micro-ROS (profile $PROFILE)"
     export MICROROS_SHIM_DIR=$SCRIPT_DIR/posix_shim
@@ -232,67 +194,14 @@ build_mcu_ws() {
             -DBUILD_SHARED_LIBS=OFF \
             -DBUILD_TESTING=OFF \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE" \
-            -DROSIDL_GENERATOR_C_DISABLE_TYPE_DESCRIPTION_CODEGEN=ON
-}
-
-package() {
-    step "Packaging into $OUT"
-    local ar=$TIARMCLANG_ROOT/bin/tiarmar
-    local stage=$WORK/package lib name obj dir
-    local result=$stage/result
-    rm -rf "$stage"
-    mkdir -p "$stage/objs" "$result"
-
-    while IFS= read -r lib; do
-        name=$(basename "$lib" .a)
-        mkdir -p "$stage/x/$name"
-        (cd "$stage/x/$name" && "$ar" x "$lib")
-        for obj in "$stage/x/$name"/*; do
-            mv "$obj" "$stage/objs/$name-$(basename "$obj")"
-        done
-    done < <(find "$FW/mcu_ws/install/lib" -name '*.a' | sort)
-    (cd "$stage/objs" && "$ar" rcs "$result/libmicroros.a" ./*)
-
-    cp -R "$FW/mcu_ws/install/include" "$result/include"
-    find "$result/include" -type f ! -name '*.h' ! -name '*.hpp' -delete
-    find "$result/include" -type d -empty -delete
-    for dir in "$result/include"/*/; do
-        name=$(basename "$dir")
-        if [[ -d $dir$name ]]; then
-            cp -R "$dir$name/." "$dir"
-            rm -rf "${dir:?}$name"
-        fi
-    done
-    cp -R "$SCRIPT_DIR/posix_shim" "$result/posix_shim"
-
-    (cd "$FW/mcu_ws" && vcs export --exact --nested) > "$result/sources.repos"
-    python3 "$SCRIPT_DIR/scripts/write_build_info.py" \
-        --distro "$DISTRO" --profile "$PROFILE" --meta "$META" \
-        --compiler "$TIARMCLANG_ROOT/bin/tiarmclang" \
-        --cmake-cache "$FW/mcu_ws/build/rcutils/CMakeCache.txt" \
-        --sources "$result/sources.repos" \
-        --json "$result/build_info.json" \
-        --header "$result/include/microros_f2838x_build_info.h"
-
-    # Replace the contents of $OUT (the folder itself may be open in CCS).
-    mkdir -p "$OUT"
-    find "$OUT" -mindepth 1 -delete
-    cp -R "$result/." "$OUT/"
-
-    if [[ -n ${HOST_UID:-} ]]; then
-        chown -R "$HOST_UID:${HOST_GID:-$HOST_UID}" "$REPO_ROOT/microros_static_library"
-    fi
-    echo
-    ls -l "$OUT/libmicroros.a"
-    echo "Done: $OUT"
+            -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE"
 }
 
 mkdir -p "$WORK"
 setup_python
-setup_toolchain
+setup_toolchain "$WORK_ROOT/toolchain"
 fetch_sources
 build_dev_ws
-prepare_mcu_ws
+prepare_mcu_ws "$FW/mcu_ws"
 build_mcu_ws
-package
+package "$FW/mcu_ws" "$WORK/package"

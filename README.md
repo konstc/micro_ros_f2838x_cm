@@ -24,7 +24,7 @@ the micro-ROS client, which connects to a micro-ROS agent over Ethernet/UDP.
 | TI C2000 code generation tools (CPU1) | 25.11.1.LTS (installed with CCS) |
 | C2000Ware | 26.02.00.00, with F2838x support |
 | FreeRTOS, lwIP | from C2000Ware (FreeRTOS V11.3.0, lwIP 2.1.2) |
-| ROS 2 / micro-ROS | Jazzy |
+| ROS 2 / micro-ROS | Jazzy (default), Lyrical, Rolling |
 
 ## Quick start
 
@@ -36,11 +36,13 @@ With Docker (Linux; on Windows run it from Git Bash with Docker Desktop running)
 ./library_generation/build_library.sh --distro jazzy --profile default
 ```
 
-The first run builds the builder image (Ubuntu 24.04 + TI Arm Clang for Linux);
-the sources and intermediate builds are kept in the Docker volume
-`micro_ros_f2838x_cm_work`, so later runs only rebuild micro-ROS.
+It builds with micro_ros_setup in micro-ROS's library builder image
+(`microros/micro_ros_static_library_builder:<distro>`, pulled on the first run).
+TI Arm Clang is downloaded once into the Docker volume
+`micro_ros_f2838x_cm_cache`; the micro-ROS sources are fetched on every run.
+`--distro` also takes `lyrical` and `rolling`.
 
-Without Docker, on Linux or in WSL2:
+Without Docker (Jazzy only), on Linux or in WSL2:
 
 ```
 ./library_generation/build_library.sh --native --distro jazzy --profile default
@@ -61,6 +63,11 @@ product settings.
 
 Import `boards/tmdscncd28388d/cpu1_bootstrap/CCS/cpu1_bootstrap.projectspec`
 and one CM project, e.g. `examples/01_publisher_udp/CCS/01_publisher_udp.projectspec`.
+The CM projects link `microros_static_library/jazzy/default`; for another
+build, change the project's `MICROROS_LIB` path variable, and for another
+distribution set `MICROROS_DISTRO` for the agent (see
+`tools/agent/docker-compose.yml`). For a project of your own, see
+[examples/README.md](examples/README.md#using-micro-ros-in-your-own-ccs-project).
 
 CCS reads a `.projectspec` only when importing; the project in the workspace
 keeps its own copy of the settings. After a `.projectspec` changes (e.g. after
@@ -106,10 +113,9 @@ configuration: CM flash programming relies on TI's reset.
 | `port/` | Board-independent port layer: UDP transport and lwIP net task, time, allocator, libc shims |
 | `device/f2838x/cm/` | F2838x CM support shared by all boards: startup code, FreeRTOS port, driverlib header wrapper for tiarmclang |
 | `boards/tmdscncd28388d/` | controlCARD support: CPU1 bootstrap, CM board code, linker command files, FreeRTOS config |
-| `examples/` | CCS example projects |
+| `examples/` | CCS example projects, and how to set up a project of your own |
 | `tests/` | `link_check` (full micro-ROS API surface in a CM image, build only), `port` (host unit tests) |
 | `tools/` | Headless CCS build, RAM report, host tests, repository checks, round-trip histogram, micro-ROS agent (Docker Compose) |
-| `docs/` | Release checklist |
 
 ## License
 

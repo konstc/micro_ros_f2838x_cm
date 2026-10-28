@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "FreeRTOS.h"
@@ -39,10 +40,32 @@ int fileno(FILE* stream)
 
 int usleep(useconds_t usec)
 {
-    /* Rounds up to whole ticks; rclc_sleep_ms() is the only user. */
+    /* Rounds up to whole ticks; rclc_sleep_ms() (Jazzy) is the only user. */
     TickType_t ticks = (TickType_t)(((uint64_t)usec * configTICK_RATE_HZ + 999999U) / 1000000U);
     vTaskDelay(ticks);
     return 0;
+}
+
+int nanosleep(const struct timespec* rqtp, struct timespec* rmtp)
+{
+    /* Rounds up to whole ticks; rclc_sleep_ms() (since Lyrical) is the only
+     * user. Never interrupted, so rmtp is not written. */
+    int ret = 0;
+
+    (void)rmtp;
+    if ((rqtp == NULL) || (rqtp->tv_sec < 0) || (rqtp->tv_nsec < 0) || (rqtp->tv_nsec >= 1000000000L))
+    {
+        errno = EINVAL;
+        ret = -1;
+    }
+    else
+    {
+        uint64_t ns = ((uint64_t)rqtp->tv_sec * 1000000000U) + (uint64_t)rqtp->tv_nsec;
+        TickType_t ticks = (TickType_t)((ns * configTICK_RATE_HZ + 999999999U) / 1000000000U);
+        vTaskDelay(ticks);
+    }
+
+    return ret;
 }
 
 char* basename(char* path)

@@ -2,15 +2,15 @@
 # Builds and runs the port's host unit tests (tests/port).
 #
 # Usage: tools/host_tests.sh [--native] [--sanitize]
-#   default     in the Docker builder image of library_generation/ (build it once
-#               with library_generation/build_library.sh)
+#   default     in micro-ROS's library builder image, which build_library.sh
+#               also uses (gcc and cmake from ROS 2's base image)
 #   --native    with the host's gcc and cmake
 #   --sanitize  with AddressSanitizer and UndefinedBehaviorSanitizer; any
 #               finding fails the test
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOCKER_IMAGE=micro_ros_f2838x_cm_builder:tiarmclang-5.1.1.LTS
+DOCKER_IMAGE=microros/micro_ros_static_library_builder:jazzy
 NATIVE=0
 SANITIZE=0
 
@@ -48,4 +48,4 @@ if [[ $(uname -s) == MINGW* || $(uname -s) == MSYS* ]]; then
     export MSYS_NO_PATHCONV=1
     host_repo=$(cygpath -m "$REPO_ROOT")
 fi
-docker run --rm -v "$host_repo:/project" -w /project "$DOCKER_IMAGE" bash -c "$CMDS"
+docker run --rm -v "$host_repo:/project" -w /project --entrypoint bash "$DOCKER_IMAGE" -c "$CMDS"

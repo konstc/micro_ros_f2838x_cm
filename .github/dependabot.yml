@@ -1,0 +1,10 @@
+# Weekly updates of the pinned GitHub Actions, in one pull request.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

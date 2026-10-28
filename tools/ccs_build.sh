@@ -6,6 +6,8 @@
 #   --c2000ware DIR    C2000Ware installation (default: $C2000WARE_ROOT)
 #   --workspace DIR    CCS workspace (default: <repo>/.ccs_workspace)
 #   --config NAME      build only this configuration (repeatable; default: all in the projectspec)
+#   --library D/P      link microros_static_library/D/P (e.g. lyrical/default) instead
+#                      of the projectspec's MICROROS_LIB
 #
 # Works in Git Bash on Windows (ccs-server-cli.bat) and on Linux (ccs-server-cli.sh).
 
@@ -17,6 +19,7 @@ C2000WARE=${C2000WARE_ROOT:-}
 WORKSPACE=$REPO_ROOT/.ccs_workspace
 CONFIGS=()
 SPECS=()
+LIBRARY=
 
 usage() { sed -n '2,/^$/s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit "${1:-0}"; }
 
@@ -26,6 +29,7 @@ while [[ $# -gt 0 ]]; do
         --c2000ware)  C2000WARE="$2"; shift 2 ;;
         --workspace)  WORKSPACE="$2"; shift 2 ;;
         --config)     CONFIGS+=("$2"); shift 2 ;;
+        --library)    LIBRARY="$2"; shift 2 ;;
         -h|--help)    usage ;;
         -*)           echo "unknown option: $1" >&2; usage 1 ;;
         *)            SPECS+=("$1"); shift ;;
@@ -33,6 +37,8 @@ while [[ $# -gt 0 ]]; do
 done
 [[ ${#SPECS[@]} -gt 0 ]] || usage 1
 [[ -n $C2000WARE ]] || { echo "error: pass --c2000ware or set C2000WARE_ROOT" >&2; exit 1; }
+[[ -z $LIBRARY || $LIBRARY =~ ^[a-z0-9_]+/[a-z0-9_]+$ ]] ||
+    { echo "error: --library takes DISTRO/PROFILE, e.g. lyrical/default" >&2; exit 1; }
 
 if [[ $(uname -s) == MINGW* || $(uname -s) == MSYS* ]]; then
     CCS=${CCS:-C:/ti/ccs2101}
@@ -70,6 +76,12 @@ for spec in "${SPECS[@]}"; do
         echo "   import FAILED (see $import_log)"
         failed=1
         continue
+    fi
+    # Project-scope path variables beat -ccs.definePathVariable, so the imported
+    # .project is edited instead.
+    if [[ -n $LIBRARY ]]; then
+        sed -i "s#\(/microros_static_library/\)[^/<]*/[^/<]*</value>#\1$LIBRARY</value>#" \
+            "$WORKSPACE/$project/.project"
     fi
 
     for config in "${configs[@]}"; do

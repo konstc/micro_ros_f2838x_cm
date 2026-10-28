@@ -1,18 +1,23 @@
-# micro-ROS agent and ROS 2 command line for the examples (ROS 2 Jazzy).
+# micro-ROS agent and ROS 2 command line for the examples.
 #   docker compose -f tools/agent/docker-compose.yml up agent-udp
 #   docker compose -f tools/agent/docker-compose.yml run --rm ros2 ros2 topic hz /c2000/counter
 #   docker compose -f tools/agent/docker-compose.yml run --rm ros2 python3 /tools/rtt_histogram.py
+#
+# MICROROS_DISTRO selects the distribution of both images (default: jazzy), to
+# match the library; MICROROS_AGENT_DISTRO overrides it for the agent. There is
+# no Lyrical agent image yet: for Lyrical, set MICROROS_AGENT_DISTRO=rolling
+# (the same XRCE agent version as Lyrical's client).
 name: microros-f2838x
 
 services:
   agent-udp:
-    image: microros/micro-ros-agent:jazzy
+    image: microros/micro-ros-agent:${MICROROS_AGENT_DISTRO:-${MICROROS_DISTRO:-jazzy}}
     command: ["udp4", "--port", "8888", "-v4"]
     ports:
       - "8888:8888/udp"
 
   ros2:
-    image: ros:jazzy
+    image: ros:${MICROROS_DISTRO:-jazzy}
     profiles: ["cli"]
     volumes:
       - ../:/tools:ro

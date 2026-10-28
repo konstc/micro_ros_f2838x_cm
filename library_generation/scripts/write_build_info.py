@@ -2,7 +2,8 @@
 """Writes build_info.json and microros_f2838x_build_info.h for a library build.
 
 build_info.json records what libmicroros.a contains: distribution, profile
-limits, compiler and flags, and the exact source revisions. The header exposes
+limits, compiler and flags, the micro_ros_setup that built it (null for the
+native build) and the exact source revisions. The header exposes
 the same to the application so that the port can check at compile time
 that it is built against a matching library.
 """
@@ -65,6 +66,7 @@ def main():
     ap.add_argument('--compiler', required=True, help='path to tiarmclang')
     ap.add_argument('--cmake-cache', required=True, help='CMakeCache.txt of one mcu_ws package')
     ap.add_argument('--sources', required=True, help='output of "vcs export --exact"')
+    ap.add_argument('--micro-ros-setup', help='micro_ros_setup version that built the library')
     ap.add_argument('--json', required=True)
     ap.add_argument('--header', required=True)
     args = ap.parse_args()
@@ -80,6 +82,7 @@ def main():
         'profile': args.profile,
         'built_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
         'compiler': version,
+        'micro_ros_setup': args.micro_ros_setup,
         'c_flags': ' '.join(filter(None, [flags.get('CMAKE_C_FLAGS', ''),
                                           flags.get('CMAKE_C_FLAGS_RELEASE', '')])),
         'profile_settings': profile_settings(args.meta),

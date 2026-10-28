@@ -1,0 +1,115 @@
+# Continuous integration: lint, host unit tests and libmicroros.a for every
+# distribution and profile. A firmware job (CCS projects, RAM gate) follows
+# once a CCS build image exists.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install the lint tools
+        run: python -m pip install --disable-pip-version-check ruff==0.17.2 shellcheck-py==0.11.0.1
+      - name: Repository checks (whitespace, line endings, SPDX headers, links)
+        run: python tools/check_repo.py
+      - name: Shell scripts
+        run: shellcheck -x library_generation/*.sh tools/*.sh
+      - name: Python tools
+        run: ruff check tools library_generation/scripts
+      - name: Projectspecs and target configurations are well-formed XML
+        run: |
+          git ls-files '*.projectspec' '*.ccxml' |
+              xargs python -c 'import sys, xml.dom.minidom; [xml.dom.minidom.parse(p) for p in sys.argv[1:]]'
+
+  host-tests:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [plain, sanitize]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Host unit tests (${{ matrix.variant }})
+        run: bash tools/host_tests.sh --native ${{ matrix.variant == 'sanitize' && '--sanitize' || '' }}
+
+  library:
+    runs-on: ubuntu-24.04
+    # Rolling follows upstream daily: a failure shows in the run without failing it.
+    continue-on-error: ${{ matrix.distro == 'rolling' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [jazzy, lyrical, rolling]
+        profile: [small, default, large]
+    env:
+      OUT: microros_static_library/${{ matrix.distro }}/${{ matrix.profile }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same library_generation/ produces the same library, apart from
+      # upstream commits on the distro branches (the weekly build catches those).
+      - name: Restore the library if library_generation/ is unchanged
+        id: library
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ${{ env.OUT }}
+          key: library-${{ matrix.distro }}-${{ matrix.profile }}-${{ hashFiles('library_generation/**', '!library_generation/**/*.md') }}
+
+      # TI Arm Clang, installed by the build into MICROROS_DOCKER_CACHE.
+      - name: Restore TI Arm Clang
+        if: steps.library.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/docker_cache/toolchain
+            !${{ runner.temp }}/docker_cache/toolchain/*.bin
+          key: tiarmclang-${{ hashFiles('library_generation/common.sh') }}
+
+      - name: Build libmicroros.a
+        if: steps.library.outputs.cache-hit != 'true'
+        env:
+          MICROROS_DOCKER_CACHE: ${{ runner.temp }}/docker_cache
+        run: bash library_generation/build_library.sh --distro "${{ matrix.distro }}" --profile "${{ matrix.profile }}"
+
+      - name: Summary
+        run: |
+          {
+              echo "### libmicroros.a: ${{ matrix.distro }}, ${{ matrix.profile }}"
+              echo
+              echo "| | |"
+              echo "| --- | --- |"
+              echo "| Compiler | $(jq -r .compiler "$OUT/build_info.json") |"
+              echo "| micro_ros_setup | $(jq -r .micro_ros_setup "$OUT/build_info.json") |"
+              echo "| Built | $(jq -r .built_at "$OUT/build_info.json") |"
+              echo "| Size | $(stat -c %s "$OUT/libmicroros.a") bytes |"
+              echo "| From cache | ${{ steps.library.outputs.cache-hit == 'true' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: libmicroros-${{ matrix.distro }}-${{ matrix.profile }}
+          path: ${{ env.OUT }}
+          if-no-files-found: error
+          retention-days: 14

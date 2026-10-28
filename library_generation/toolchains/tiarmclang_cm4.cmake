@@ -1,7 +1,8 @@
 # CMake toolchain: F2838x Connectivity Manager (Cortex-M4 without FPU), TI Arm Clang.
 #
-# build_library.sh sets TIARMCLANG_ROOT (compiler install) and MICROROS_SHIM_DIR
-# (library_generation/posix_shim) in the environment.
+# build_library.sh (native mode) and library_generation.sh (micro-ROS static
+# library builder image) set TIARMCLANG_ROOT (compiler install) and
+# MICROROS_SHIM_DIR (library_generation/posix_shim) in the environment.
 #
 # The target flags below must match the CCS projects that link the library;
 # build_info.json records the flags actually used.
@@ -21,6 +22,7 @@ file(TO_CMAKE_PATH "$ENV{MICROROS_SHIM_DIR}" MICROROS_SHIM_DIR)
 set(CMAKE_C_COMPILER   ${TIARMCLANG_ROOT}/bin/tiarmclang)
 set(CMAKE_CXX_COMPILER ${TIARMCLANG_ROOT}/bin/tiarmclang)
 set(CMAKE_AR           ${TIARMCLANG_ROOT}/bin/tiarmar CACHE FILEPATH "" FORCE)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX ${CMAKE_CURRENT_LIST_DIR}/tiarmclang_cxx_rules.cmake)
 
 # tiarmar is llvm-ar: it writes the symbol index itself, no ranlib step needed.
 foreach(lang C CXX)
@@ -46,5 +48,11 @@ set(CMAKE_CXX_FLAGS_RELEASE      "-Os -DNDEBUG" CACHE STRING "" FORCE)
 
 # Micro-CDR reads this instead of probing the target.
 set(__BIG_ENDIAN__ 0)
+
+# Since Jazzy, rosidl generates full type descriptions (REP 2011) as writable
+# static data: about 28 KB of RAM for the parameter server alone. The type
+# hashes stay. Set here because micro_ros_setup's build passes no extra CMake
+# arguments.
+set(ROSIDL_GENERATOR_C_DISABLE_TYPE_DESCRIPTION_CODEGEN ON CACHE BOOL "" FORCE)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

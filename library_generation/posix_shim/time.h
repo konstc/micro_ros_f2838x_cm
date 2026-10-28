@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 int clock_gettime(clockid_t clock_id, struct timespec* tp);
+int nanosleep(const struct timespec* rqtp, struct timespec* rmtp);
 
 #ifdef __cplusplus
 }
