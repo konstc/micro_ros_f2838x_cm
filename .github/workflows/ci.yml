@@ -1,6 +1,6 @@
-# Continuous integration: lint, host unit tests and libmicroros.a for every
-# distribution and profile. A firmware job (CCS projects, RAM gate) follows
-# once a CCS build image exists.
+# Continuous integration: lint, host unit tests, libmicroros.a for every
+# distribution and profile, and the CCS projects against each distribution's
+# default library.
 name: CI
 
 on:
@@ -31,7 +31,7 @@ jobs:
       - name: Repository checks (whitespace, line endings, SPDX headers, links)
         run: python tools/check_repo.py
       - name: Shell scripts
-        run: shellcheck -x library_generation/*.sh tools/*.sh
+        run: shellcheck -x library_generation/*.sh tools/*.sh tools/ci/ccs/*.sh
       - name: Python tools
         run: ruff check tools library_generation/scripts
       - name: Projectspecs and target configurations are well-formed XML
@@ -112,4 +112,71 @@ jobs:
           name: libmicroros-${{ matrix.distro }}-${{ matrix.profile }}
           path: ${{ env.OUT }}
           if-no-files-found: error
+          retention-days: 14
+
+  # The CCS image is private (TI software), so pull requests from forks cannot
+  # pull it and skip this job. Image tag: tools/ci/ccs/build_image.sh.
+  firmware:
+    needs: library
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    continue-on-error: ${{ matrix.distro == 'rolling' }}
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [jazzy, lyrical, rolling]
+    container:
+      image: ghcr.io/konstc/micro_ros_f2838x_cm/ccs:ccs21.0.1-c2000ware26.02.00.00
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: libmicroros-${{ matrix.distro }}-default
+          path: microros_static_library/${{ matrix.distro }}/default
+
+      - name: Build the CCS projects
+        run: |
+          bash tools/ccs_build.sh --library "${{ matrix.distro }}/default" \
+              boards/tmdscncd28388d/cpu1_bootstrap/CCS/cpu1_bootstrap.projectspec \
+              examples/*/CCS/*.projectspec tests/link_check/CCS/link_check.projectspec
+
+      - name: RAM margin and summary
+        run: |
+          status=0
+          {
+              echo "### Firmware: ${{ matrix.distro }}, default library"
+              echo
+              echo "| Project | Configuration | Flash used, bytes | RAM free, bytes |"
+              echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for map in .ccs_workspace/*/*/*.map; do
+              project=$(basename "$map" .map)
+              config=$(basename "$(dirname "$map")")
+              [[ $project != cpu1_bootstrap ]] || continue
+              flash=$(python3 tools/ram_report.py "$map" --regions CMBANK0_FLASH |
+                      awk '$1 == "CMBANK0_FLASH" { print $3 }')
+              report=$(python3 tools/ram_report.py "$map" --min-margin 8K) || status=1
+              echo "$project $config: $(tail -1 <<< "$report")"
+              echo "| $project | $config | $flash | $(awk '$1 == "total" { print $4 }' <<< "$report") |" \
+                  >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit $status
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        if: failure()
+        with:
+          name: ccs-logs-${{ matrix.distro }}
+          path: .ccs_workspace/logs
           retention-days: 14

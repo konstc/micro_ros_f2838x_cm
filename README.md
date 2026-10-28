@@ -1,4 +1,4 @@
-# micro-ROS for the C2000 F2838x Connectivity Manager
+# micro-ROS for the TI F2838x Connectivity Manager
 
 micro-ROS on the Cortex-M4 Connectivity Manager (CM) of the TI F2838x, with CCS
 example projects for the TMDSCNCD28388D controlCARD on the TMDSHSECDOCK docking
@@ -115,7 +115,7 @@ configuration: CM flash programming relies on TI's reset.
 | `boards/tmdscncd28388d/` | controlCARD support: CPU1 bootstrap, CM board code, linker command files, FreeRTOS config |
 | `examples/` | CCS example projects, and how to set up a project of your own |
 | `tests/` | `link_check` (full micro-ROS API surface in a CM image, build only), `port` (host unit tests) |
-| `tools/` | Headless CCS build, RAM report, host tests, repository checks, round-trip histogram, micro-ROS agent (Docker Compose) |
+| `tools/` | Headless CCS build, RAM report, host tests, repository checks, round-trip histogram, micro-ROS agent (Docker Compose), CCS image for CI |
 
 ## License
 
