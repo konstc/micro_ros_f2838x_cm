@@ -26,18 +26,9 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: '3.12'
-      - name: Install the lint tools
-        run: python -m pip install --disable-pip-version-check ruff==0.17.2 shellcheck-py==0.11.0.1
-      - name: Repository checks (whitespace, line endings, SPDX headers, links)
-        run: python tools/check_repo.py
-      - name: Shell scripts
-        run: shellcheck -x library_generation/*.sh tools/*.sh tools/ci/ccs/*.sh
-      - name: Python tools
-        run: ruff check tools library_generation/scripts
-      - name: Projectspecs and target configurations are well-formed XML
-        run: |
-          git ls-files '*.projectspec' '*.ccxml' |
-              xargs python -c 'import sys, xml.dom.minidom; [xml.dom.minidom.parse(p) for p in sys.argv[1:]]'
+      # Repository checks, shellcheck, ruff, well-formed XML
+      - name: Lint
+        run: bash tools/lint.sh
 
   host-tests:
     runs-on: ubuntu-24.04

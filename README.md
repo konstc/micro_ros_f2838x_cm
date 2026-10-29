@@ -85,8 +85,10 @@ tools/ccs_build.sh --c2000ware C:/ti/c2000/C2000Ware_26_02_00_00 \
 
 ### 3. Run
 
-With the `TMS320F28388D.ccxml` target configuration (on-card XDS100v2, S1:A
-switch 1 ON):
+Board connections, switches and LEDs:
+[boards/tmdscncd28388d](boards/tmdscncd28388d/README.md). With the
+`TMS320F28388D.ccxml` target configuration (on-card XDS100v2, S1:A switch 1
+ON):
 
 1. Connect to `C28xx_CPU1`, load `cpu1_bootstrap.out` and run it. CPU1 boots the
    CM from flash and blinks LED D2.
@@ -96,7 +98,7 @@ switch 1 ON):
 
 The CM always runs from flash: the micro-ROS stack is larger than the CM's RAM.
 For standalone operation, build `cpu1_bootstrap` in the `CPU1_FLASH`
-configuration and program both cores.
+configuration, program both cores and set the boot mode to flash.
 
 TI's GEL scripts reset the device and clear RAM when CCS connects. To attach to
 a running board instead, start a project-less debug session with

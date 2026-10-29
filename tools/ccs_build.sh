@@ -3,7 +3,8 @@
 #
 # Usage: tools/ccs_build.sh [options] PROJECTSPEC...
 #   --ccs DIR          CCS installation (default: $CCS_ROOT, else C:/ti/ccs2101 or /opt/ti/ccs2101)
-#   --c2000ware DIR    C2000Ware installation (default: $C2000WARE_ROOT)
+#   --c2000ware DIR    C2000Ware installation (default: $C2000WARE_ROOT, else
+#                      C:/ti/c2000/C2000Ware_26_02_00_00 or /opt/ti/c2000/C2000Ware_26_02_00_00)
 #   --workspace DIR    CCS workspace (default: <repo>/.ccs_workspace)
 #   --config NAME      build only this configuration (repeatable; default: all in the projectspec)
 #   --library D/P      link microros_static_library/D/P (e.g. lyrical/default) instead
@@ -36,21 +37,23 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 [[ ${#SPECS[@]} -gt 0 ]] || usage 1
-[[ -n $C2000WARE ]] || { echo "error: pass --c2000ware or set C2000WARE_ROOT" >&2; exit 1; }
 [[ -z $LIBRARY || $LIBRARY =~ ^[a-z0-9_]+/[a-z0-9_]+$ ]] ||
     { echo "error: --library takes DISTRO/PROFILE, e.g. lyrical/default" >&2; exit 1; }
 
 if [[ $(uname -s) == MINGW* || $(uname -s) == MSYS* ]]; then
     CCS=${CCS:-C:/ti/ccs2101}
+    C2000WARE=${C2000WARE:-C:/ti/c2000/C2000Ware_26_02_00_00}
     CLI=("$CCS/ccs/eclipse/ccs-server-cli.bat")
     export MSYS_NO_PATHCONV=1
     native_path() { cygpath -m "$(realpath "$1")"; }
 else
     CCS=${CCS:-/opt/ti/ccs2101}
+    C2000WARE=${C2000WARE:-/opt/ti/c2000/C2000Ware_26_02_00_00}
     CLI=("$CCS/ccs/eclipse/ccs-server-cli.sh")
     native_path() { realpath "$1"; }
 fi
 [[ -e ${CLI[0]} ]] || { echo "error: CCS headless CLI not found: ${CLI[0]}" >&2; exit 1; }
+[[ -d $C2000WARE ]] || { echo "error: C2000Ware not found: $C2000WARE (--c2000ware)" >&2; exit 1; }
 
 mkdir -p "$WORKSPACE/logs"
 WS=$(native_path "$WORKSPACE")
